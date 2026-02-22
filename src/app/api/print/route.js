@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import {
   isLocalMode, loadSettings, generateTSPL,
-  sendRawPrint, sendNetworkPrint, sendGDIPrint, addToQueue,
+  sendRawPrint, sendNetworkPrint, sendGDIPrint,
 } from "@/lib/printer";
+import { addToQueue } from "@/lib/queue";
 
 export async function POST(request) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request) {
     // CLOUD MODE — add to print queue
     // ══════════════════════════════════════════
     if (!isLocalMode()) {
-      const job = addToQueue({
+       const job = await addToQueue({
         printerName: printerName || "default",
         printerType, printerIp, printerPort,
         tspl,
