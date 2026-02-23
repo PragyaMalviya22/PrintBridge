@@ -1,10 +1,10 @@
 /**
  * ═══════════════════════════════════════════════════════════
- * LabelForge Print Agent
+ * Printium Print Agent
  * ═══════════════════════════════════════════════════════════
  * 
  * This runs on your Windows PC that has the printer connected via USB.
- * It polls the cloud LabelForge server every 3 seconds for new print jobs,
+ * It polls the cloud Printium server every 3 seconds for new print jobs,
  * then sends them to your local printer.
  * 
  * SETUP:
@@ -64,7 +64,7 @@ public class RawPrint {
   [DllImport("winspool.Drv",EntryPoint="WritePrinter",SetLastError=true,ExactSpelling=true,CallingConvention=CallingConvention.StdCall)]
   public static extern bool WritePrinter(IntPtr h, IntPtr p, Int32 c, out Int32 w);
   public static bool Send(string name, byte[] data) {
-    IntPtr h; var di = new DOCINFOA(); di.pDocName="LabelForge Agent"; di.pDataType="RAW";
+    IntPtr h; var di = new DOCINFOA(); di.pDocName="Printium Agent"; di.pDataType="RAW";
     if(!OpenPrinter(name.Normalize(),out h,IntPtr.Zero)) return false;
     if(!StartDocPrinter(h,1,di)){ClosePrinter(h);return false;}
     if(!StartPagePrinter(h)){EndDocPrinter(h);ClosePrinter(h);return false;}
@@ -174,7 +174,7 @@ const detectedPrinter = detectPrinter();
 
 console.log("");
 console.log("  ╔══════════════════════════════════════════════╗");
-console.log("  ║       🏷️  LabelForge Print Agent              ║");
+console.log("  ║       🏷️  Printium Print Agent              ║");
 console.log("  ╠══════════════════════════════════════════════╣");
 console.log(`  ║  Server:  ${CLOUD_URL.padEnd(34)}║`);
 console.log(`  ║  Printer: ${(detectedPrinter || "⚠️ Not found").padEnd(34)}║`);
