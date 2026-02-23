@@ -1,0 +1,17 @@
+{
+    "name": "Printium",
+    "short_name": "Printium",
+    "description": "Smart Label Printing System",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#090b0f",
+    "theme_color": "#6c8cff",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

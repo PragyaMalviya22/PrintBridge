@@ -158,9 +158,9 @@ export default function Home() {
       {/* ═══ HEADER ═══ */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0 16px", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 38, height: 38, background: "linear-gradient(135deg,#6c8cff,#a855f7)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: "#fff" }}>LF</div>
+          <img src="/icon.png" alt="Printium" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover" }} />
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700 }}>LabelForge</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700 }}>Printium</h1>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: connected ? "var(--success)" : "var(--danger)", animation: "pulse 2s infinite" }} />
               <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1 }}>
