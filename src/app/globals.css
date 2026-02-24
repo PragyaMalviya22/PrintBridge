@@ -2,30 +2,8 @@
    PRINTIUM — Global Styles & Responsive System
    ═══════════════════════════════════════════════ */
 
-/* ── CSS Variables — Dark (default) ── */
+/* ── CSS Variables — Light (default) ── */
 :root {
-  --bg: #090b0f;
-  --card: #11141b;
-  --card2: #161a24;
-  --input: #1a1f2b;
-  --border: #252b3a;
-  --text: #e4e8f0;
-  --text2: #8892a8;
-  --muted: #545d74;
-  --accent: #6c8cff;
-  --glow: rgba(108, 140, 255, 0.1);
-  --success: #2dd4a0;
-  --warn: #f5b731;
-  --danger: #f07070;
-  --radius-card: 14px;
-  --radius-btn: 10px;
-  --radius-input: 8px;
-  --shadow-btn: 0 4px 20px rgba(108, 140, 255, 0.3);
-  --theme-transition: background .25s ease, color .25s ease, border-color .2s ease;
-}
-
-/* ── CSS Variables — Light ── */
-[data-theme="light"] {
   --bg: #f0f2f7;
   --card: #ffffff;
   --card2: #f5f7fc;
@@ -39,7 +17,29 @@
   --success: #16a37a;
   --warn: #d4900a;
   --danger: #d94f4f;
+  --radius-card: 14px;
+  --radius-btn: 10px;
+  --radius-input: 8px;
   --shadow-btn: 0 4px 20px rgba(79, 110, 247, 0.28);
+  --theme-transition: background .25s ease, color .25s ease, border-color .2s ease;
+}
+
+/* ── CSS Variables — Dark ── */
+[data-theme="dark"] {
+  --bg: #090b0f;
+  --card: #11141b;
+  --card2: #161a24;
+  --input: #1a1f2b;
+  --border: #252b3a;
+  --text: #e4e8f0;
+  --text2: #8892a8;
+  --muted: #545d74;
+  --accent: #6c8cff;
+  --glow: rgba(108, 140, 255, 0.1);
+  --success: #2dd4a0;
+  --warn: #f5b731;
+  --danger: #f07070;
+  --shadow-btn: 0 4px 20px rgba(108, 140, 255, 0.3);
 }
 
 /* ── Reset ── */
@@ -171,13 +171,27 @@ textarea {
   padding: 0 16px;
 }
 
-/* --- Header --- */
+/* --- Header (sticky) --- */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 0 18px;
   margin-bottom: 4px;
+}
+
+/* Sticky variant added to <header> */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  margin-bottom: 0;
+  padding: 10px 0;
+  transition: var(--theme-transition);
 }
 
 .header-brand {
@@ -190,8 +204,11 @@ textarea {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 4px;
 }
 
 .header-title {
@@ -235,15 +252,63 @@ textarea {
   gap: 6px;
 }
 
-/* --- Desktop two-column grid --- */
+/* --- Two-column grid (mobile: stacked) --- */
 .content-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
+  margin-top: 14px;
 }
 
 .col-left,
 .col-right {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ════════════════════════════════════════
+   MOBILE SETTINGS ACCORDION
+   ════════════════════════════════════════ */
+
+/* Toggle button: visible only on mobile */
+.settings-accordion-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background .15s, border-color .15s;
+}
+
+.settings-accordion-btn:hover {
+  background: var(--card2);
+  border-color: var(--accent);
+}
+
+.settings-accordion-btn.open {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.accordion-chevron {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Settings panels: collapsed by default on mobile */
+.settings-panels {
+  display: none;
+}
+
+.settings-panels.expanded {
   display: flex;
   flex-direction: column;
 }
@@ -932,18 +997,36 @@ textarea {
   display: block;
 }
 
+/* Sticky variant added to <header> */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  margin-bottom: 0;
+  padding: 10px 0;
+  transition: var(--theme-transition);
+}
+
 /* ════════════════════════════════════════
    MODAL (BOTTOM SHEET on mobile, CENTERED on desktop)
    ════════════════════════════════════════ */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .75);
+  background: rgba(0, 0, 0, .4);
   z-index: 100;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .modal-backdrop {
+  background: rgba(0, 0, 0, .75);
 }
 
 .modal-sheet {
@@ -1191,7 +1274,7 @@ textarea {
 /* ── xl (1024px+) — desktop ── */
 @media (min-width: 1024px) {
   .page-wrapper {
-    max-width: 1080px;
+    max-width: 1200px;
     padding: 0 28px;
   }
 
@@ -1203,18 +1286,32 @@ textarea {
     font-size: 21px;
   }
 
-  /* Two-column content grid */
+  /* 65 / 35 two-column layout */
   .content-grid {
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: 65% 35%;
     gap: 20px;
     align-items: start;
   }
 
-  /* Right column sticks while scrolling left */
+  /* Right column sticks below sticky header (header ≈ 64px) */
   .col-right {
     position: sticky;
-    top: 20px;
+    top: 72px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  /* Hide mobile accordion toggle on desktop */
+  .settings-accordion-btn {
+    display: none;
+  }
+
+  /* Always show settings panels on desktop */
+  .settings-panels {
+    display: flex;
+    flex-direction: column;
   }
 
   /* Cards feel more spacious */

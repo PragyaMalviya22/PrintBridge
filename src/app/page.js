@@ -15,9 +15,9 @@ import {
 
 /* ── Theme hook ── */
 function useTheme() {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
   useEffect(() => {
-    const saved = localStorage.getItem("pm-theme") || "dark";
+    const saved = localStorage.getItem("pm-theme") || "light";
     setTheme(saved);
     document.documentElement.setAttribute("data-theme", saved);
   }, []);
@@ -95,8 +95,31 @@ export default function Home() {
         if (s?.labelWidth)   setLC({ width: s.labelWidth });
         if (s?.labelHeight)  setLC({ height: s.labelHeight });
       } catch { setConnected(false); }
+
+      // Load history from Neon DB; fall back to localStorage if unavailable
+      try {
+        const hRes = await fetch("/api/history");
+        if (hRes.ok) {
+          const { jobs } = await hRes.json();
+          if (Array.isArray(jobs) && jobs.length > 0) {
+            setHistory(jobs.map(j => ({
+              name:   j.product_name,
+              sku:    j.sku,
+              serial: j.serial,
+              copies: j.copies,
+              lw:     j.label_width,
+              lh:     j.label_height,
+              time:   new Date(j.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+            })));
+          } else {
+            throw new Error("empty");
+          }
+        } else throw new Error("api");
+      } catch {
+        // Fallback to localStorage
+        try { const h = localStorage.getItem("lf3"); if (h) setHistory(JSON.parse(h)); } catch {}
+      }
     })();
-    try { const h = localStorage.getItem("lf3"); if (h) setHistory(JSON.parse(h)); } catch {}
   }, []);
 
   /* ── Ctrl+P ── */
@@ -161,6 +184,22 @@ export default function Home() {
       const nh = [entry, ...history].slice(0, 50);
       setHistory(nh);
       try { localStorage.setItem("lf3", JSON.stringify(nh)); } catch {}
+      // Save to Neon DB (fire-and-forget)
+      fetch("/api/history", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id:          `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          productName: name,
+          sku, serial, price, copies,
+          printerName: printer || "default",
+          printerType: cp.type || "usb",
+          labelWidth:  width,
+          labelHeight: height,
+          fontFamily, fontSize, alignment, rotation,
+          status: "done",
+        }),
+      }).catch(() => {}); // silent — don't block UI
       if (serialOn) setSerial(incSerial(serial, copies));
     } catch (e) { notify(e.response?.data?.error || "Print failed", true); }
     setBusy(false);
@@ -212,12 +251,16 @@ export default function Home() {
   const previewW = Math.min(280, Math.max(110, lw * PX_PER_MM * 0.7));
   const previewH = Math.min(320, Math.max(55,  lh * PX_PER_MM * 0.7));
 
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+
   return (
     <div className="app-shell">
-      <div className="page-wrapper">
 
-        {/* ═══ HEADER ═══ */}
-        <header className="header">
+      {/* ══════════════════════════════════════
+          STICKY TOP BAR
+         ══════════════════════════════════════ */}
+      <header className="header sticky-header">
+        <div className="page-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "0 16px" }}>
           <div className="header-brand">
             <img src="/icon.png" alt="Printium" className="header-logo" />
             <div>
@@ -238,9 +281,15 @@ export default function Home() {
             <button className="btn-inline accent" onClick={() => setWifiOpen(true)}>📶</button>
             <button className="btn-inline" onClick={() => setSettingsOpen(true)}>⚙️</button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* ═══ BANNERS ═══ */}
+      {/* ══════════════════════════════════════
+          MAIN CONTENT
+         ══════════════════════════════════════ */}
+      <div className="page-wrapper">
+
+        {/* ── Banners ── */}
         {mode === "cloud" && (
           <div className="banner cloud">
             <span style={{ fontSize: 12, color: "var(--accent)" }}>☁️</span>
@@ -253,94 +302,58 @@ export default function Home() {
           </div>
         )}
 
-        {/* ═══ TWO-COLUMN GRID ═══ */}
+        {/* ══════════════════════════════════════
+            RESPONSIVE TWO-COLUMN GRID
+            Desktop: left 65% | right 35%
+            Mobile: single column
+           ══════════════════════════════════════ */}
         <div className="content-grid">
 
-          {/* ─── LEFT COLUMN ─── */}
+          {/* ════════════════════════════════════
+              LEFT COLUMN — Preview + Label editor
+             ════════════════════════════════════ */}
           <div className="col-left">
 
-            {/* ── Printer ── */}
-            <div className="card">
-              <div className="card-head">
-                <span className="card-head-title">🖨️ Printer</span>
-                <button className="btn-icon" onClick={doRefresh}>🔄 Refresh</button>
+            {/* ── Live WYSIWYG Preview ── */}
+            <div className="preview-panel">
+              <div className="flex-between mb-12">
+                <span style={{ fontSize: 13, fontWeight: 600 }}>👁️ Preview</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span className="badge-mono">{lw}×{lh}mm</span>
+                  {rotation > 0 && <span className="badge-mono">{rotation}°</span>}
+                </div>
               </div>
-
-              {/* No-printer warning — local mode only */}
-              {mode === "local" && printers.length === 0 && (
-                <div className="no-printer-alert">
-                  <div className="no-printer-icon">🖨️</div>
-                  <div className="no-printer-body">
-                    <div className="no-printer-title">No Printer Connected</div>
-                    <div className="no-printer-msg">
-                      Connect a USB or WiFi printer, then click&nbsp;
-                      <strong>Refresh</strong> to detect it.
+              <div className="preview-stage">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", transition: "transform .3s ease" }}>
+                  <div
+                    className="preview-label"
+                    style={{
+                      width: previewW,
+                      minHeight: previewH,
+                      fontFamily,
+                      textAlign: alignment,
+                      transform: `rotate(${rotation}deg)`,
+                      transition: "transform .3s ease, width .2s, min-height .2s",
+                    }}
+                  >
+                    <div style={{ width: "100%", fontSize, fontWeight: 700, wordBreak: "break-word", lineHeight: 1.2 }}>
+                      {name || "Product Name"}
                     </div>
+                    {serialOn && serial && <div style={{ fontSize: Math.max(8, fontSize * 0.65), color: "#666", width: "100%" }}>{serial}</div>}
+                    {dateOn   && <div style={{ fontSize: Math.max(7, fontSize * 0.6),  color: "#999", width: "100%" }}>{today}</div>}
+                    {priceOn  && price  && <div style={{ fontSize: Math.max(10, fontSize * 0.85), fontWeight: 700, width: "100%" }}>₹ {price}</div>}
+                    {barcode  && <div style={{ marginTop: 4 }}><Barcode value={sku || "0000"} width={1.2} height={30} /></div>}
+                    {qr       && <div style={{ marginTop: 4 }}><QRCodeCanvas value={`${name||"P"}|${sku||"0"}|${serial}`} size={64} /></div>}
                   </div>
-                  <button className="btn-inline" onClick={doRefresh} style={{ flexShrink: 0 }}>🔄 Refresh</button>
                 </div>
-              )}
-
-              {/* Printer select — shown when printers exist */}
-              {printers.length > 0 && (
-                <div className="flex-row">
-                  <select className="inp inp-select flex-1" value={printer} onChange={e => setPrinter(e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {printers.filter(p => p.type === "usb").length > 0 && (
-                      <optgroup label="🔌 USB">
-                        {printers.filter(p => p.type === "usb").map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                      </optgroup>
-                    )}
-                    {printers.filter(p => p.type === "network").length > 0 && (
-                      <optgroup label="📶 WiFi">
-                        {printers.filter(p => p.type === "network").map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                      </optgroup>
-                    )}
-                  </select>
-                  <button className="btn-inline" onClick={doTest} style={{ color: "var(--success)" }}>🧪</button>
-                </div>
-              )}
-
-              {cp.type === "network" && <span className="wifi-badge">📶 {cp.ip}:{cp.netPort}</span>}
-            </div>
-
-            {/* ── Label Size ── */}
-            <div className="card">
-              <div className="card-head mb-12">
-                <span className="card-head-title">📐 Size</span>
-                <span className="badge-mono">{lw}×{lh}mm</span>
               </div>
-              <SizeSelector
-                lw={lw} lh={lh} gap={gap}
-                showCustom={showCustom}
-                onSelect={(w, h) => setLC({ width: w, height: h })}
-                onToggleCustom={setShowCustom}
-                onGapChange={v => setLC({ gap: v })}
-                onLwChange={v => setLC({ width: v })}
-                onLhChange={v => setLC({ height: v })}
-              />
-            </div>
-
-            {/* ── Format Toolbar ── */}
-            <div className="card">
-              <div className="section-label">🎨 Formatting</div>
-              <div className="fmt-toolbar">
-                <div className="fmt-group">
-                  <FontFamilySelector value={fontFamily} onChange={v => setLC({ fontFamily: v })} />
-                </div>
-                <div className="fmt-group">
-                  <FontSizeControl value={fontSize} onChange={v => setLC({ fontSize: v })} />
-                </div>
-                <div className="fmt-group" style={{ minWidth: 160 }}>
-                  <AlignmentControl value={alignment} onChange={v => setLC({ alignment: v })} />
-                </div>
-                <div className="fmt-group" style={{ minWidth: 200 }}>
-                  <RotationControl value={rotation} onChange={v => setLC({ rotation: v })} />
-                </div>
+              <div className="preview-footer">
+                <span>{lw}×{lh}mm · gap {gap}mm</span>
+                <span>{fontFamily} · {fontSize}px · {alignment}</span>
               </div>
             </div>
 
-            {/* ── Label Content ── */}
+            {/* ── Label Editor ── */}
             <div className="card">
               <span style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 12 }}>🏷️ Label</span>
 
@@ -372,7 +385,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Copies */}
+              {/* Copies + Print */}
               <div className="flex-row mb-14">
                 <span style={{ fontSize: 12, color: "var(--text2)" }}>Copies</span>
                 <div className="copies-counter">
@@ -382,7 +395,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Print button */}
               <div className="btn-row">
                 <button className="btn btn-primary flex-1" onClick={doPrint} disabled={busy}>
                   {busy ? "⏳ Printing…" : mode === "cloud" ? "📤 Send to Print" : "🖨️ Print Label"}
@@ -393,53 +405,107 @@ export default function Home() {
 
           </div>{/* /col-left */}
 
-          {/* ─── RIGHT COLUMN ─── */}
+          {/* ════════════════════════════════════
+              RIGHT COLUMN — Settings + Recent
+              Mobile: wrapped in collapsible accordion
+             ════════════════════════════════════ */}
           <div className="col-right">
 
-            {/* ── Live WYSIWYG Preview ── */}
-            <div className="preview-panel">
-              <div className="flex-between mb-12">
-                <span style={{ fontSize: 13, fontWeight: 600 }}>👁️ Preview</span>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span className="badge-mono">{lw}×{lh}mm</span>
-                  {rotation > 0 && <span className="badge-mono">{rotation}°</span>}
+            {/* ── Mobile Settings Accordion toggle ── */}
+            <button
+              className={`settings-accordion-btn ${settingsExpanded ? "open" : ""}`}
+              onClick={() => setSettingsExpanded(!settingsExpanded)}
+              aria-expanded={settingsExpanded}
+            >
+              <span>⚙️ Settings</span>
+              <span className="accordion-chevron">{settingsExpanded ? "▲" : "▼"}</span>
+            </button>
+
+            {/* Settings panels: always visible on desktop, toggled on mobile */}
+            <div className={`settings-panels ${settingsExpanded ? "expanded" : ""}`}>
+
+              {/* ── Printer ── */}
+              <div className="card">
+                <div className="card-head">
+                  <span className="card-head-title">🖨️ Printer</span>
+                  <button className="btn-icon" onClick={doRefresh}>🔄 Refresh</button>
                 </div>
-              </div>
-              <div className="preview-stage">
-                {/* Outer rotation wrapper */}
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "transform .3s ease",
-                }}>
-                  <div
-                    className="preview-label"
-                    style={{
-                      width:    previewW,
-                      minHeight: previewH,
-                      fontFamily,
-                      textAlign: alignment,
-                      transform: `rotate(${rotation}deg)`,
-                      transition: "transform .3s ease, width .2s, min-height .2s",
-                    }}
-                  >
-                    <div style={{ width: "100%", fontSize, fontWeight: 700, wordBreak: "break-word", lineHeight: 1.2 }}>
-                      {name || "Product Name"}
+
+                {/* No-printer warning — local mode only */}
+                {mode === "local" && printers.length === 0 && (
+                  <div className="no-printer-alert">
+                    <div className="no-printer-icon">🖨️</div>
+                    <div className="no-printer-body">
+                      <div className="no-printer-title">No Printer Connected</div>
+                      <div className="no-printer-msg">
+                        Connect a USB or WiFi printer, then click&nbsp;
+                        <strong>Refresh</strong> to detect it.
+                      </div>
                     </div>
-                    {serialOn && serial && <div style={{ fontSize: Math.max(8, fontSize * 0.65), color: "#666", width: "100%" }}>{serial}</div>}
-                    {dateOn   && <div style={{ fontSize: Math.max(7, fontSize * 0.6), color: "#999", width: "100%" }}>{today}</div>}
-                    {priceOn  && price  && <div style={{ fontSize: Math.max(10, fontSize * 0.85), fontWeight: 700, width: "100%" }}>₹ {price}</div>}
-                    {barcode  && <div style={{ marginTop: 4 }}><Barcode value={sku || "0000"} width={1.2} height={30} /></div>}
-                    {qr       && <div style={{ marginTop: 4 }}><QRCodeCanvas value={`${name||"P"}|${sku||"0"}|${serial}`} size={64} /></div>}
+                    <button className="btn-inline" onClick={doRefresh} style={{ flexShrink: 0 }}>🔄</button>
+                  </div>
+                )}
+
+                {printers.length > 0 && (
+                  <div className="flex-row">
+                    <select className="inp inp-select flex-1" value={printer} onChange={e => setPrinter(e.target.value)}>
+                      <option value="">-- Select --</option>
+                      {printers.filter(p => p.type === "usb").length > 0 && (
+                        <optgroup label="🔌 USB">
+                          {printers.filter(p => p.type === "usb").map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                        </optgroup>
+                      )}
+                      {printers.filter(p => p.type === "network").length > 0 && (
+                        <optgroup label="📶 WiFi">
+                          {printers.filter(p => p.type === "network").map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                        </optgroup>
+                      )}
+                    </select>
+                    <button className="btn-inline" onClick={doTest} style={{ color: "var(--success)" }}>🧪</button>
+                  </div>
+                )}
+                {printers.length > 0 && cp.type === "network" && <span className="wifi-badge">📶 {cp.ip}:{cp.netPort}</span>}
+              </div>
+
+              {/* ── Label Size ── */}
+              <div className="card">
+                <div className="card-head mb-12">
+                  <span className="card-head-title">📐 Size</span>
+                  <span className="badge-mono">{lw}×{lh}mm</span>
+                </div>
+                <SizeSelector
+                  lw={lw} lh={lh} gap={gap}
+                  showCustom={showCustom}
+                  onSelect={(w, h) => setLC({ width: w, height: h })}
+                  onToggleCustom={setShowCustom}
+                  onGapChange={v => setLC({ gap: v })}
+                  onLwChange={v => setLC({ width: v })}
+                  onLhChange={v => setLC({ height: v })}
+                />
+              </div>
+
+              {/* ── Format Toolbar ── */}
+              <div className="card">
+                <div className="section-label">🎨 Formatting</div>
+                <div className="fmt-toolbar">
+                  <div className="fmt-group">
+                    <FontFamilySelector value={fontFamily} onChange={v => setLC({ fontFamily: v })} />
+                  </div>
+                  <div className="fmt-group">
+                    <FontSizeControl value={fontSize} onChange={v => setLC({ fontSize: v })} />
+                  </div>
+                  <div className="fmt-group" style={{ minWidth: 160 }}>
+                    <AlignmentControl value={alignment} onChange={v => setLC({ alignment: v })} />
+                  </div>
+                  <div className="fmt-group" style={{ minWidth: 200 }}>
+                    <RotationControl value={rotation} onChange={v => setLC({ rotation: v })} />
                   </div>
                 </div>
               </div>
-              <div className="preview-footer">
-                <span>{lw}×{lh}mm · gap {gap}mm</span>
-                <span>{fontFamily} · {fontSize}px · {alignment}</span>
-              </div>
-            </div>
 
-            {/* ── History ── */}
+            </div>{/* /settings-panels */}
+
+            {/* ── Recent (always visible) ── */}
             {history.length > 0 && (
               <div className="card mb-0">
                 <div className="flex-between mb-10">
@@ -479,10 +545,16 @@ export default function Home() {
             </div>
             <div className="modal-field">
               <label className="lbl">Default Printer</label>
-              <select className="inp inp-select" value={printer} onChange={e => setPrinter(e.target.value)}>
-                <option value="">-- Select --</option>
-                {printers.map(p => <option key={p.name} value={p.name}>{p.name} ({p.type})</option>)}
-              </select>
+              {printers.length > 0 ? (
+                <select className="inp inp-select" value={printer} onChange={e => setPrinter(e.target.value)}>
+                  <option value="">-- Select --</option>
+                  {printers.map(p => <option key={p.name} value={p.name}>{p.name} ({p.type})</option>)}
+                </select>
+              ) : (
+                <div style={{ padding: "10px 12px", background: "var(--input)", border: "1.5px solid var(--border)", borderRadius: "var(--radius-input)", fontSize: 13, color: "var(--muted)" }}>
+                  🖨️ No printer connected — connect one and click Refresh
+                </div>
+              )}
             </div>
             <div className="modal-field">
               <label className="lbl">Print Method</label>
