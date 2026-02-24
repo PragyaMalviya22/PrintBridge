@@ -3,6 +3,7 @@
 const STANDARD_SIZES = [
   // Quick label presets
   { group: "Label Presets", name: "Tiny 25×15",       w: 25,  h: 15  },
+  { group: "Label Presets", name: "Mini 38×12",        w: 38,  h: 12  },
   { group: "Label Presets", name: "Small 38×25",       w: 38,  h: 25  },
   { group: "Label Presets", name: "Medium 50×25",      w: 50,  h: 25  },
   { group: "Label Presets", name: "Standard 50×30",    w: 50,  h: 30  },
