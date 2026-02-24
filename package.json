@@ -8,6 +8,7 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@upstash/redis": "^1.36.2",
     "axios": "^1.6.0",
     "jsbarcode": "^3.11.6",
