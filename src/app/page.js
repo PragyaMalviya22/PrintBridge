@@ -180,6 +180,8 @@ export default function Home() {
         rotation,
       });
       notify(`✅ ${r.message}`);
+      setName("");
+      setTimeout(() => inputRef.current?.focus(), 50);
       const entry = { name, sku, serial, copies, lw: width, lh: height, time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) };
       const nh = [entry, ...history].slice(0, 50);
       setHistory(nh);
@@ -386,20 +388,21 @@ export default function Home() {
               )}
 
               {/* Copies + Print */}
-              <div className="flex-row mb-14">
-                <span style={{ fontSize: 12, color: "var(--text2)" }}>Copies</span>
-                <div className="copies-counter">
-                  <button className="copies-btn" onClick={() => setCopies(Math.max(1, copies - 1))}>−</button>
-                  <input className="copies-input" value={copies} onChange={e => setCopies(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} />
-                  <button className="copies-btn" onClick={() => setCopies(Math.min(999, copies + 1))}>+</button>
+              <div className="print-actions">
+                <div className="btn-row print-btn-row">
+                  <button className="btn btn-primary flex-1" onClick={doPrint} disabled={busy}>
+                    {busy ? "⏳ Printing…" : mode === "cloud" ? "📤 Send to Print" : "🖨️ Print Label"}
+                  </button>
+                  <button className="btn-row btn-clear" onClick={clear}>↺</button>
                 </div>
-              </div>
-
-              <div className="btn-row">
-                <button className="btn btn-primary flex-1" onClick={doPrint} disabled={busy}>
-                  {busy ? "⏳ Printing…" : mode === "cloud" ? "📤 Send to Print" : "🖨️ Print Label"}
-                </button>
-                <button className="btn-row btn-clear" onClick={clear}>↺</button>
+                <div className="copies-row">
+                  <span style={{ fontSize: 12, color: "var(--text2)" }}>Copies</span>
+                  <div className="copies-counter">
+                    <button className="copies-btn" onClick={() => setCopies(Math.max(1, copies - 1))}>−</button>
+                    <input className="copies-input" value={copies} onChange={e => setCopies(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} />
+                    <button className="copies-btn" onClick={() => setCopies(Math.min(999, copies + 1))}>+</button>
+                  </div>
+                </div>
               </div>
             </div>
 

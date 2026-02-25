@@ -516,6 +516,64 @@ textarea {
   outline: none;
 }
 
+/* ── Print actions wrapper (copies + print button) ── */
+.print-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.copies-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  order: 1;
+  /* copies above print on desktop */
+}
+
+.print-btn-row {
+  order: 2;
+  /* print below copies on desktop */
+}
+
+/* On mobile: flip order — print button first, copies row second (smaller) */
+@media (max-width: 600px) {
+  .print-actions {
+    gap: 8px;
+  }
+
+  .print-btn-row {
+    order: 1;
+    /* print button comes first */
+  }
+
+  .copies-row {
+    order: 2;
+    /* copies row comes after */
+    justify-content: flex-end;
+  }
+
+  /* Shrink the copies counter on mobile */
+  .copies-row .copies-counter {
+    border-radius: 7px;
+  }
+
+  .copies-row .copies-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .copies-row .copies-input {
+    width: 34px;
+    font-size: 12px;
+  }
+
+  .copies-row>span {
+    font-size: 11px !important;
+  }
+}
+
 /* ════════════════════════════════════════
    FORMATTER TOOLBAR
    ════════════════════════════════════════ */
