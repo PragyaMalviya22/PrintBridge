@@ -76,6 +76,35 @@ export default function Home() {
   const [toast,    setToast]    = useState({ show: false, msg: "", err: false });
   const [busy,     setBusy]     = useState(false);
   const inputRef = useRef();
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  /* ── PWA install prompt capture ── */
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const doShare = async () => {
+    const url = window.location.origin;
+    if (navigator.share) {
+      try { await navigator.share({ title: "Printium", text: "Label printing app — install it on your phone!", url }); } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      notify("🔗 Link copied to clipboard!");
+    }
+  };
+
+  const doInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") notify("✅ App installed!");
+      setDeferredPrompt(null);
+    } else {
+      notify("📱 Tap browser menu → \"Add to Home Screen\" to install");
+    }
+  };
 
   const cp = printers.find(p => p.name === printer) || {};
 
@@ -280,6 +309,10 @@ export default function Home() {
               title={theme === "dark" ? "Switch to Light" : "Switch to Dark"} aria-label="Toggle theme">
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
+            <button className="btn-inline" onClick={doShare} title="Share app link">📤</button>
+            {deferredPrompt && (
+              <button className="btn-inline accent" onClick={doInstall} title="Install app">⬇️ Install</button>
+            )}
             <button className="btn-inline accent" onClick={() => setWifiOpen(true)}>📶</button>
             <button className="btn-inline" onClick={() => setSettingsOpen(true)}>⚙️</button>
           </div>
