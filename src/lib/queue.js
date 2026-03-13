@@ -48,7 +48,7 @@ export async function addToQueue(job) {
           (id, product_name, sku, serial, price, copies,
            printer_name, printer_type,
            label_width, label_height,
-           font_family, font_size, alignment, rotation, status)
+           font_family, font_size, alignment, rotation, status, tspl)
         VALUES
           (${entry.id},
            ${entry.text        || entry.productName || ""},
@@ -64,7 +64,8 @@ export async function addToQueue(job) {
            ${entry.fontSize    || 14},
            ${entry.alignment   || "center"},
            ${entry.rotation    || 0},
-           ${"pending"})
+           ${"pending"},
+           ${entry.tspl        || ""})
         ON CONFLICT (id) DO NOTHING
       `;
       return entry;

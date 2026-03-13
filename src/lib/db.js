@@ -51,6 +51,7 @@ export async function initDb() {
         alignment    TEXT        DEFAULT 'center',
         rotation     INTEGER     DEFAULT 0,
         status       TEXT        DEFAULT 'done',
+        tspl         TEXT        DEFAULT '',
         created_at   TIMESTAMPTZ DEFAULT NOW()
       )
     `;
@@ -69,14 +70,13 @@ export async function initDb() {
   }
 }
 
-// ─── Print Jobs ───────────────────────────────────────────────────────────────
 export async function insertPrintJob(job) {
   const {
     id, productName, sku = "", serial = "", price = "", copies = 1,
     printerName = "", printerType = "usb",
     labelWidth = 50, labelHeight = 30,
     fontFamily = "Courier New", fontSize = 14,
-    alignment = "center", rotation = 0, status = "done",
+    alignment = "center", rotation = 0, status = "done", tspl = "",
   } = job;
 
   if (sql) {
@@ -86,12 +86,12 @@ export async function insertPrintJob(job) {
           (id, product_name, sku, serial, price, copies,
            printer_name, printer_type,
            label_width, label_height,
-           font_family, font_size, alignment, rotation, status)
+           font_family, font_size, alignment, rotation, status, tspl)
         VALUES
           (${id}, ${productName}, ${sku}, ${serial}, ${price}, ${copies},
            ${printerName}, ${printerType},
            ${labelWidth}, ${labelHeight},
-           ${fontFamily}, ${fontSize}, ${alignment}, ${rotation}, ${status})
+           ${fontFamily}, ${fontSize}, ${alignment}, ${rotation}, ${status}, ${tspl})
         ON CONFLICT (id) DO NOTHING
       `;
       return;
