@@ -24,11 +24,18 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const net = require("net");
+const https = require("https");
+
+// Bypass local SSL/network block issues in Windows
+const axiosInstance = axios.create({
+  httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+  timeout: 10000
+});
 
 // ════════════════════════════════════════════════════
 // ⚙️ CONFIGURATION — EDIT THESE
 // ════════════════════════════════════════════════════
-const CLOUD_URL = process.env.CLOUD_URL || "http://localhost:3000";
+const CLOUD_URL = (process.env.CLOUD_URL || "http://localhost:3000").trim().replace(/[\r\n]/g, "");
 const PRINTER_NAME = process.env.PRINTER_NAME || ""; // Leave empty to auto-detect first printer
 const POLL_INTERVAL = 3000; // Check every 3 seconds
 
@@ -128,7 +135,7 @@ function detectPrinter() {
 // ════════════════════════════════════════════════════
 async function pollAndPrint() {
   try {
-    const { data } = await axios.get(`${CLOUD_URL}/api/print-queue`);
+    const { data } = await axiosInstance.get(`${CLOUD_URL}/api/print-queue`);
     if (!data.jobs || data.jobs.length === 0) return;
 
     const defaultPrinter = detectPrinter();
@@ -138,7 +145,7 @@ async function pollAndPrint() {
         const pName = job.printerName === "default" ? defaultPrinter : (job.printerName || defaultPrinter);
         if (!pName) {
           console.log(`⚠️  No printer found for job ${job.id}`);
-          await axios.post(`${CLOUD_URL}/api/print-queue`, { jobId: job.id, status: "failed" });
+          await axiosInstance.post(`${CLOUD_URL}/api/print-queue`, { jobId: job.id, status: "failed" });
           continue;
         }
 
@@ -150,19 +157,20 @@ async function pollAndPrint() {
           await sendRawPrint(pName, job.tspl);
         }
 
-        await axios.post(`${CLOUD_URL}/api/print-queue`, { jobId: job.id, status: "done" });
+        await axiosInstance.post(`${CLOUD_URL}/api/print-queue`, { jobId: job.id, status: "done" });
         console.log(`✅  Done: ${job.id}`);
       } catch (err) {
         console.error(`❌  Failed: ${job.id} — ${err.message}`);
         try {
-          await axios.post(`${CLOUD_URL}/api/print-queue`, { jobId: job.id, status: "failed" });
+          await axiosInstance.post(`${CLOUD_URL}/api/print-queue`, { jobId: job.id, status: "failed" });
         } catch (_) {}
       }
     }
   } catch (err) {
     // Server unreachable — silent retry
     if (err.code !== "ECONNREFUSED") {
-      console.error(`⚠️  Poll error: ${err.message}`);
+      const msg = err.response ? err.response.statusText : err.message;
+      console.error(`⚠️  Poll error: ${msg} (Code: ${err.code || 'UNKNOWN'})`);
     }
   }
 }
