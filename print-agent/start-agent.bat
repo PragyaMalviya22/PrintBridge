@@ -8,8 +8,7 @@ echo.
 REM ═══════════════════════════════════════════════
 REM EDIT THESE VALUES:
 REM ═══════════════════════════════════════════════
-REM Your Vercel URL (after hosting):
-set CLOUD_URL=https://printium.vercel.app
+set CLOUD_URL=https://printiumprint.vercel.app
 REM Your printer name (leave empty for auto-detect):
 set PRINTER_NAME=
 
